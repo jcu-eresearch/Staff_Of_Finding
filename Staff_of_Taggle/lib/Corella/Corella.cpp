@@ -87,9 +87,9 @@ corella_response_e Corella::send_data(uint8_t packet_type, uint8_t* buf, size_t 
 
 
     char rvc_buf[128];
-    mdot_response response;
+    corella_response_e response;
     read_response(rvc_buf, sizeof(rvc_buf), &response);
-    return response == corella_response_ok;
+    return corella_response_ok;
 };
 
 void Corella::clear_buf() {
