@@ -20,6 +20,7 @@ enum corella_response_e
     corella_response_undefined,
     corella_response_ok,
     corella_response_error,
+    corella_response_wait,
     corella_response_error_data_size_to_large,
 };
 
@@ -27,7 +28,7 @@ class Corella
 {
 private:
     Stream *port, *debug;
-    size_t read_response(char* buf, size_t buf_size, corella_response_e * result, unsigned long time_out=50000);
+    size_t read_response(char* buf, size_t buf_size, corella_response_e * result, unsigned long time_out=5000);
 
 public:
     Corella(Stream *port, Stream* debug);
