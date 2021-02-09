@@ -25,17 +25,39 @@
 */
 
 TinyGPS gps;
-SoftwareSerial ss(4, 3);
-//SoftwareSerial ss(4, 9);
+
+#define MODE_RUN 0
+#define MODE_GPS_TEST 1
+#define MODE_TAGGLE_TEST 2
+#define MODE_LED_TEST 3
+
+#define MODE MODE_RUN
+//# define MODE MODE_GPS_TEST
+//#define MODE MODE_TAGGLE_TEST
+//#define MODE MODE_LED_TEST
+
+SoftwareSerial gps_port(4, 3);
+
+#if MODE == MODE_RUN || MODE == MODE_TAGGLE_TEST
+
 SoftwareSerial _debug(8, 9);
 Stream *debug = &_debug;
-//SoftwareSerial *debug = &ss;
+
+#elif MODE == MODE_GPS_TEST || MODE == MODE_LED_TEST
+
+Stream *debug = nullptr;
+
+#endif
+
+
+
 
 
 uint8_t button_pin = 2;
 uint8_t buzzer_pin = 6;
 uint8_t red_led_pin = 13;
 uint8_t green_led_pin = 12;
+uint8_t blue_led_pin = 11;
 uint8_t  POWERBEE_CONTROL_PIN = 5;
 volatile unsigned long last;
 
@@ -77,9 +99,21 @@ Corella *taggle;
 void setup()
 {
     Serial.begin(9600);
-    //debug = &Serial;
-    //_debug.begin(9600);
-    ss.begin(9600);
+
+#if MODE == MODE_RUN
+    debug->println("Running in mode: RUN");
+#elif MODE == MODE_GPS_TEST
+    debug = &Serial;
+    debug->println("Running in mode: GPS_TEST");
+#elif MODE == MODE_TAGGLE_TEST
+    _debug.begin(9600);
+    debug->println("Running in mode: TAGGLE_TEST");
+#elif MODE == MODE_LED_TEST
+    debug = &Serial;
+    debug->println("Running in mode: GPS_LED_TEST");
+#endif
+
+    gps_port.begin(9600);
     last = millis();
 
     memset(&reading, 0, sizeof(reading));
@@ -89,11 +123,11 @@ void setup()
 
     delay(100);
     debug->println("Starting...");
+
+#if MODE == MODE_RUN || MODE == MODE_TAGGLE_TEST
+    debug->println("Initializing Corella");
     taggle = new Corella(&Serial, debug);
-    char *bb = "HelloWorld!";
-    taggle->send_data(1, (uint8_t*)bb, 12);
-    //debug->println("1st Complete");
-    //taggle->send_data(1, (uint8_t*)bb, 12);
+#endif
 
     debug->println("HelloWorld!");
 
@@ -101,6 +135,7 @@ void setup()
     pinMode(buzzer_pin, OUTPUT);
     pinMode(red_led_pin, OUTPUT);
     pinMode(green_led_pin, OUTPUT);
+    pinMode(blue_led_pin, OUTPUT);
 
     attachInterrupt(digitalPinToInterrupt(button_pin), button_press, RISING);
     //Serial.println("ATI");
@@ -152,7 +187,13 @@ void loop()
             debug->print("Reading Size: ");
             debug->println(sizeof(reading));
 
-            corella_response_e response = taggle->send_data(1, (uint8_t*)&reading, sizeof(reading));
+
+            corella_response_e response = corella_response_undefined;
+
+#if MODE == MODE_RUN || MODE == MODE_TAGGLE_TEST
+            debug->println("Sending Data...");
+            response = taggle->send_data(1, (uint8_t*)&reading, sizeof(reading));
+#endif
 
             if(response == corella_response_ok)
             {
@@ -203,70 +244,32 @@ void loop()
     }
 
 
-    //debug->println(ss.available());
-    while (ss.available())
+    while (gps_port.available())
     {
-        char c = ss.read();
-        //Serial.write(c); // uncomment this line if you want to see the GPS data flowing
+        char c = (char)gps_port.read();
+
+#if MODE == MODE_GPS_TEST
+        Serial.write(c); // uncomment this line if you want to see the GPS data flowing
+#endif
+
         if (gps.encode(c)){
             //debug->println("GPS");
             //digitalWrite(red_led_pin, !digitalRead(red_led_pin));
         }
-
-    }
-}
-
-/*
-
-void loop()
-{
-
-    if(Serial.available())
-    {
-        uint8_t val = Serial.read();
-        debug->write(val);
     }
 
-}
-*/
+#if MODE == MODE_LED_TEST
+    digitalWrite(red_led_pin, HIGH);
+    delay(500);
+    digitalWrite(red_led_pin, LOW);
+    digitalWrite(green_led_pin, HIGH);
+    delay(500);
+    digitalWrite(green_led_pin, LOW);
+    digitalWrite(blue_led_pin, HIGH);
+    delay(500);
+    digitalWrite(blue_led_pin, LOW);
+    delay(500);
 
-/*
-
-void 1oop()
-{
-    if(do_send)
-    {
-        do_send = false;
-        digitalWrite(buzzer_pin, HIGH);
-        delay(500);
-        digitalWrite(buzzer_pin, LOW);
-
-
-        debug->println("");
-        Serial.println("ATI");
-        delay(50);
-        while(Serial.available())
-        {
-            uint8_t val = debug->read();
-            debug->write(val);
-        }
-        //power_down_radio();
-    }
-
-
-    //debug->println(ss.available());
-    while (ss.available())
-    {
-        char c = ss.read();
-        //Serial.write(c); // uncomment this line if you want to see the GPS data flowing
-        if (gps.encode(c)){
-            //debug->println("GPS");
-            digitalWrite(red_led_pin, !digitalRead(red_led_pin));
-
-
-        }
-
-    }
+#endif
 
 }
- */
