@@ -32,16 +32,18 @@ TinyGPS gps;
 #define MODE_LED_TEST 3
 
 #define MODE MODE_RUN
-//# define MODE MODE_GPS_TEST
+//#define MODE MODE_GPS_TEST
 //#define MODE MODE_TAGGLE_TEST
 //#define MODE MODE_LED_TEST
 
-SoftwareSerial gps_port(4, 3);
+//SoftwareSerial gps_port(4, 3);
+SoftwareSerial gps_port(4, 9);
 
 #if MODE == MODE_RUN || MODE == MODE_TAGGLE_TEST
 
-SoftwareSerial _debug(8, 9);
-Stream *debug = &_debug;
+//SoftwareSerial _debug(8, 9);
+//Stream *debug = &_debug;
+Stream *debug = nullptr;
 
 #elif MODE == MODE_GPS_TEST || MODE == MODE_LED_TEST
 
@@ -101,7 +103,9 @@ void setup()
     Serial.begin(9600);
 
 #if MODE == MODE_RUN
+    debug = &gps_port;
     debug->println("Running in mode: RUN");
+
 #elif MODE == MODE_GPS_TEST
     debug = &Serial;
     debug->println("Running in mode: GPS_TEST");
@@ -113,7 +117,10 @@ void setup()
     debug->println("Running in mode: GPS_LED_TEST");
 #endif
 
+#if MODE == MODE_RUN || MODE == MODE_GPS_TEST
     gps_port.begin(9600);
+#endif
+
     last = millis();
 
     memset(&reading, 0, sizeof(reading));
@@ -124,12 +131,17 @@ void setup()
     delay(100);
     debug->println("Starting...");
 
-#if MODE == MODE_RUN || MODE == MODE_TAGGLE_TEST
-    debug->println("Initializing Corella");
-    taggle = new Corella(&Serial, debug);
-#endif
+    debug->print("Session Size: ");
+    debug->println(sizeof(session_registration_t));
 
-    debug->println("HelloWorld!");
+    debug->print("Reading Size: ");
+    debug->println(sizeof(reading_t));
+
+    debug->print("GPS GGA: ");
+    debug->println(_GPGGA_TERM);
+
+    debug->println("-----------------------------------------------");
+    debug->println("Initializing Pins and Attaching Interrupts...");
 
     pinMode(button_pin, INPUT);
     pinMode(buzzer_pin, OUTPUT);
@@ -138,12 +150,43 @@ void setup()
     pinMode(blue_led_pin, OUTPUT);
 
     attachInterrupt(digitalPinToInterrupt(button_pin), button_press, RISING);
+
+#if MODE == MODE_RUN || MODE == MODE_TAGGLE_TEST
+    debug->println("Initializing Corella");
+    taggle = new Corella(&Serial, debug);
+    int32_t id;
+    taggle->get_at_id(id);
+    debug->print("Corella ID: ");
+    debug->println(id);
+    session_registration_t reg = {0};
+    memset(&reg, 0, sizeof(reg));
+    reg.magic_number = TAGGLE_SESSION_REGISTRATION_MAGIC_NUMBER;
+    reg.session_type = taggle_session_gps_dec;
+
+    size_t count = 0;
+    for(; count < 5; count++){
+        debug->println("Attempting to send Session Registration Packet");
+        corella_response_e response = taggle->send_data(TAGGLE_SESSION_REGISTRATION_PACKET_ID, (uint8_t *) &reg, sizeof(reg));
+        if(response == corella_response_ok)
+        {
+            debug->println("Sent Session Registration Packet");
+            break;
+        }
+        delay(30000);
+    }
+    if(count >= 5)
+    {
+        debug->println("Failed to send Registration Packet");
+    }
+    delay(2000);
+#endif
+
     //Serial.println("ATI");
 
 
     debug->println("------------------------------");
     digitalWrite(buzzer_pin, HIGH);
-    delay(10);
+    delay(100);
     digitalWrite(buzzer_pin, LOW);
 }
 
@@ -170,6 +213,7 @@ void loop()
             long lat, lng;
             unsigned long age;
             gps.get_position(&lat, &lng, &age);
+            memset(&reading, 0, sizeof(reading));
             reading.latitude = lat;
             reading.longitude = lng;
             reading.prec = gps.hdop();
@@ -183,16 +227,11 @@ void loop()
             debug->print("Long: ");
             debug->println(reading.longitude);
 
-
-            debug->print("Reading Size: ");
-            debug->println(sizeof(reading));
-
-
             corella_response_e response = corella_response_undefined;
 
 #if MODE == MODE_RUN || MODE == MODE_TAGGLE_TEST
             debug->println("Sending Data...");
-            response = taggle->send_data(1, (uint8_t*)&reading, sizeof(reading));
+            response = taggle->send_data(TAGGLE_GPS_PACKET_ID, (uint8_t*)&reading, sizeof(reading));
 #endif
 
             if(response == corella_response_ok)
