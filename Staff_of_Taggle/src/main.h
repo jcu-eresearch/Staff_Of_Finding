@@ -40,3 +40,22 @@ struct reading_t
     long latitude, longitude;
     unsigned long prec;
 } __attribute__((packed));
+
+#define TAGGLE_SESSION_REGISTRATION_PACKET_ID 9
+#define TAGGLE_SESSION_REGISTRATION_MAGIC_NUMBER 0xABCD
+#define TAGGLE_GPS_PACKET_ID 2
+
+enum taggle_session_e
+{
+    taggle_session_none = 0,
+    taggle_session_gps_dms = 1,
+    taggle_session_gps_dec = 2,
+    taggle_session_ceres_tag_esn_2 = 3,
+};
+
+struct session_registration_t
+{
+    uint16_t magic_number;
+    enum taggle_session_e session_type;
+    uint64_t p2;
+} __attribute__((packed));
