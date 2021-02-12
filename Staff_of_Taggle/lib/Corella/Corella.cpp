@@ -19,33 +19,39 @@
 
 #include "Corella.h"
 
-Corella::Corella(Stream *port, Stream* debug) {
+Corella::Corella(Stream *port, Stream* debug, unsigned long time_out) {
 
+    this->timeout = time_out;
     debug->println("Corella Init");
     this->debug = debug;
     this->port = port;
+
     this->port->println("");
     String er = port->readStringUntil('\n');
-    this->port->println(er);
-    delay(100);
+//    this->port->println(er);
+//    delay(100);
     this->port->println("AT+VERSION?");
 
-    String s = port->readStringUntil('\n');
+//    String s = port->readStringUntil('\n');
     String corella = port->readStringUntil('\n');
     String hw_ver = port->readStringUntil('\n');
     String fw_ver = port->readStringUntil('\n');
-    String b = port->readStringUntil('\n');
-    String ok = port->readStringUntil('\n');
+//    String b = port->readStringUntil('\n');
+//    String ok = port->readStringUntil('\n');
 
     debug->print("Hardware Version: ");
     debug->println(hw_ver);
     debug->print("Firmware Version: ");
     debug->println(fw_ver);
-    debug->println(ok.startsWith("OK"));
+//    debug->println("Taggle ID: ");
+//    debug->println(b);
+//    debug->print("OK: ");
+//    debug->println(ok);
+    this->port->setTimeout(time_out);
     clear_buf();
 }
 
-size_t Corella::read_response(char *buf, size_t buf_size, corella_response_e * result, unsigned long time_out) {
+size_t Corella::read_response(char *buf, size_t buf_size, corella_response_e * result) {
     size_t count = 0;
     *result = corella_response_undefined;
     memset(buf, 0, buf_size);
@@ -61,7 +67,7 @@ size_t Corella::read_response(char *buf, size_t buf_size, corella_response_e * r
 
     this->debug->print("\r\n\r\n> ");
 
-    while(millis() - start < time_out)
+    while(millis() - start < this->timeout)
     {
         if(this->port->available())
         {
@@ -136,6 +142,19 @@ void Corella::clear_buf() {
     }
 }
 
+corella_response_e Corella::get_at_id(int32_t &taggle_id)
+{
+    corella_response_e status = corella_response_undefined;
+
+
+    clear_buf();
+    port->println("AT+ID?");
+
+    String response = port->readStringUntil('\n');
+    taggle_id = response.toInt();
+//    taggle_id = atoi(_buf);
+    return status;
+};
 
 
 

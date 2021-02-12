@@ -23,6 +23,7 @@
 #include <Stream.h>
 #include "Arduino.h"
 #include "parser.h"
+#include "stdlib.h"
 
 struct corella_version_t
 {
@@ -42,12 +43,14 @@ enum corella_response_e
 class Corella
 {
 private:
+    unsigned long timeout;
     Stream *port, *debug;
-    size_t read_response(char* buf, size_t buf_size, corella_response_e * result, unsigned long time_out=5000);
+    size_t read_response(char* buf, size_t buf_size, corella_response_e * result);
 
 public:
-    Corella(Stream *port, Stream* debug);
+    Corella(Stream *port, Stream* debug, unsigned long time_out=5000);
     corella_response_e send_data(uint8_t packet_type, uint8_t* buf, size_t buf_size);
+    corella_response_e get_at_id(int32_t &taggle_id);
 
     void clear_buf();
 };
