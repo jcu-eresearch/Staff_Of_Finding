@@ -125,11 +125,19 @@ void setup()
 
     memset(&reading, 0, sizeof(reading));
 
-    debug->print("Simple TinyGPS library v. "); debug->println(TinyGPS::library_version());
+    delay(100);
+
+    debug->println("Starting...");
     debug->println();
 
-    delay(100);
-    debug->println("Starting...");
+    debug->print("Compile Date Time: ");
+    debug->print(__DATE__);
+    debug->print(" ");
+    debug->println(__TIME__);
+
+    debug->println();
+    debug->print("Simple TinyGPS library v. "); debug->println(TinyGPS::library_version());
+    debug->println();
 
     debug->print("Session Size: ");
     debug->println(sizeof(session_registration_t));
