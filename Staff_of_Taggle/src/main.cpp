@@ -180,7 +180,7 @@ void setup()
             debug->println("Sent Session Registration Packet");
             break;
         }
-        delay(30000);
+        delay(5000);
     }
     if(count >= 5)
     {
